@@ -1,0 +1,66 @@
+
+#include <xc.h>
+#include "config.h"
+
+
+#define ON 1 
+#define IN 1
+#define OFF 0
+#define LOW 0
+#define HI 1
+
+char contador = 0;
+void ConfTMR0_1 (void);
+void configinterrupt (void);
+
+
+void main(void) {
+    OSCCON = 0x72; //configura el osc a 8MHz
+    TRISD = 0x00; //salida portd
+    TRISBbits.RB0 = IN; 
+    TRISBbits.RB1 = IN;
+    ConfTMR0_1();
+    configinterrupt ();
+    while (1) {}
+    return;
+}
+
+void ConfTMR0_1(){
+    INTCONbits.TMR0IF =0;
+    T0CON = 0b00000100;
+    TMR0 = 3036;
+    T0CONbits.TMR0ON =1;
+}
+
+void configinterrupt (){
+    INTCON = 0b11100000;
+    INTCONbits.INT0E = ON; //Habilita la interrupción externa0;
+    INTCON2bits.INTEDG0 = HI; //flanco descendente
+    INTCON3bits.INT1E = ON; //Habilita la interrupción externa1;
+    INTCON2bits.INTEDG1 = HI; //flanco descendente
+    RCONbits.IPEN = 0; //Habilita la interrupción externa1;
+}
+
+void __interrupt () miISR( ){
+   if(INTCONbits.T0IF==1){ //Check timer0 flag
+       T0CONbits.TMR0ON = 0;
+       TMR0 = 3036;
+       T0CONbits.TMR0ON = 1;
+       contador ++;
+       contador = contador%16;
+       LATD = contador;
+       INTCONbits.T0IF = 0;
+   }
+   if (INTCONbits.INT0F == HI){
+       contador ++;
+       contador = contador%16;
+       LATD = contador;
+       INTCONbits.INT0F =0;
+   }
+   if(INTCON3bits.INT1IF == HI){
+       contador--;
+       contador = contador%16;
+       LATD = contador;
+       INTCON3bits.INT1IF = 0;
+   }
+}
